@@ -10,18 +10,39 @@
 			"path" : "pages/content/content",
 			"style" : 
 			{
-				"navigationBarTitleText" : "图书大全"
+				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path" : "pages/login/login",
 			"style" : 
 			{
-				"navigationBarTitleText" : "登录页"
+				"navigationStyle": "custom"
 			}
 		},
 		{
-			"path" : "pages/content/detail/detail",
+			"path" : "pages/user/user",
+			"style" : 
+			{
+				"navigationStyle": "custom" 
+			}
+		},
+		{
+			"path" : "pages/login/register/register",
+			"style" : 
+			{
+				"navigationBarTitleText" : "注册"
+			}
+		},
+		{
+			"path" : "pages/login/forget/forget",
+			"style" : 
+			{
+				"navigationBarTitleText" : "忘记密码"
+			}
+		},
+		{
+			"path" : "pages/login/agreement/agreement",
 			"style" : 
 			{
 				"navigationBarTitleText" : ""
@@ -32,7 +53,36 @@
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app",
 		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
+		"backgroundColor": "#F8F8F8",
+		"app-plus": {
+			"titleNView": {
+				false
+			}
+		}
 	},
-	"uniIdRouter": {}
+	"uniIdRouter": {},
+	"tabBar": {
+	    "color": "#999",
+	    "selectedColor": "#1890ff",
+	    "backgroundColor": "#fff",
+	    "borderStyle": "black",
+	    "list": [
+	      {
+	        "pagePath": "pages/index/index",
+	        "text": "首页"
+	      },
+	      {
+	        "pagePath": "pages/content/content",
+	        "text": "分类"
+	      },
+	      {
+	        "pagePath": "pages/borrow/index",
+	        "text": "借阅"
+	      },
+	      {
+	        "pagePath": "pages/user/user",
+	        "text": "我的"
+	      }
+	    ]
+	  }
 }

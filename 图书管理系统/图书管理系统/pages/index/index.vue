@@ -1,138 +1,72 @@
 <template>
-<view style="background-color:azure;">
-	<view class="box-bg">
-		<uni-nav-bar :fixed="true" left-icon="left" leftText="返回" right-icon="person" title="图书管理系统"
-			style="margin-top: -12rpx;" />
-	</view>
+	<view class="index-container">
+		<!-- 顶部导航栏 -->
+		<uni-nav-bar :fixed="true" right-icon="person" title="图书管理系统"
+			 @clickRight="navigateToUserCenter" />
 
-	<view class="uni-flex uni-row" style="justify-content: space-between; background-color: burlywood;">
-		<view>
-			<uni-search-bar @confirm="search" :focus="true" v-model="searchValue" @blur="blur" @focus="focus"
-				@input="input" @cancel="cancel" @clear="clear">
-			</uni-search-bar>
+		<!-- 搜索区域 -->
+		<view class="search-section">
+			<uni-search-bar v-model="searchKeyword" placeholder="搜索图书/作者" @confirm="handleSearch" @clear="clearSearch"
+				cancel-button="none" />
 		</view>
-		<view>
-			
-			<uni-section title="实心标签" type="line" padding >
-				<view class="example-body">
-					<view class="tag-view" style="padding-left: 25rpx;" @click="goToPageIndex('/pages/index/index')">
-						<uni-tag text="首页" type="primary" />
-					</view>
-					<view class="tag-view" style="padding-left: 25rpx;" @click="goToPageContent('/pages/content/content')">
-						<uni-tag text="大全" type="success" />
-					</view>
-					<view class="tag-view" style="padding-left: 25rpx;">
-						<uni-tag text="咨询" type="warning" />
-					</view>
-					<view class="tag-view" style="padding-left: 25rpx;" @click="goToPageLogin('/pages/login/login')">
-						<uni-tag text="个人" type="error" />
-					</view>
-				</view>
-			</uni-section>
+
+		<!-- 分类标签 -->
+		<view class="category-tabs">
+			<view v-for="(tab, index) in tabs" :key="index" class="tab-item" :class="{ active: activeTab === index }"
+				@click="switchTab(index)">
+				<text>{{ tab.name }}</text>
+			</view>
 		</view>
-	</view>
 
-
-	<view>
-		<view class="uni-margin-wrap" style="margin-bottom: 20rpx;">
-			<swiper class="swiper" circular :indicator-dots="indicatorDots" :autoplay="autoplay" :interval="interval"
-				:duration="duration">
-				<swiper-item>
-					<view class="swiper-item uni-bg-red">A</view>
-				</swiper-item>
-				<swiper-item>
-					<view class="swiper-item uni-bg-green">B</view>
-				</swiper-item>
-				<swiper-item>
-					<view class="swiper-item uni-bg-blue">C</view>
+		<!-- 轮播图 -->
+		<view class="swiper-container">
+			<swiper circular :indicator-dots="true" :autoplay="true" :interval="5000">
+				<swiper-item v-for="(item, index) in banners" :key="index">
+					<image :src="item.image" mode="aspectFill" class="banner-image" @click="handleBannerClick(item)" />
 				</swiper-item>
 			</swiper>
 		</view>
-		
-		<view>
-		<uni-notice-bar show-icon scrollable
-						text="uni-app 版正式发布，开发一次，同时发布iOS、Android、H5、微信小程序、支付宝小程序、百度小程序、头条小程序等7大平台。" />
-        </view>
 
-		<view>
-			<view class="uni-padding-wrap uni-common-mt">
-				<view class="uni-flex uni-column">
-					<view class="flex-item flex-item-V uni-bg-red">
-						<view class="uni-flex uni-row">
-							<view class="flex-item uni-bg-red">A</view>
-							<view class="flex-item uni-bg-green">B</view>
-							<view class="flex-item uni-bg-blue">C</view>
-						</view>
-					</view>
-					<view class="flex-item flex-item-V uni-bg-green">
-						<view class="uni-flex uni-row">
-							<view class="flex-item uni-bg-red">A</view>
-							<view class="flex-item uni-bg-green">B</view>
-							<view class="flex-item uni-bg-blue">C</view>
-						</view>
-					</view>
-					<view class="flex-item flex-item-V uni-bg-blue">
-						<view class="uni-flex uni-row">
-							<view class="flex-item uni-bg-red">A</view>
-							<view class="flex-item uni-bg-green">B</view>
-							<view class="flex-item uni-bg-blue">C</view>
-						</view>
-					</view>
+		<!-- 公告 -->
+		<uni-notice-bar show-icon scrollable :text="announcement" />
+
+		<!-- 热门图书 -->
+		<view class="section">
+			<view class="section-header">
+				<text class="section-title">热门图书</text>
+				<text class="more" @click="navigateToBookList('hot')">更多 ></text>
+			</view>
+			<scroll-view scroll-x class="book-scroll">
+				<view v-for="book in hotBooks" :key="book.id" class="book-card" @click="navigateToBookDetail(book.id)">
+					<image :src="book.cover" class="book-cover" mode="aspectFit" />
+					<text class="book-title">{{ book.title }}</text>
+					<text class="book-author">{{ book.author }}</text>
+				</view>
+			</scroll-view>
+		</view>
+
+		<!-- 新书推荐 -->
+		<view class="section">
+			<view class="section-header">
+				<text class="section-title">新书推荐</text>
+				<text class="more" @click="navigateToBookList('new')">更多 ></text>
+			</view>
+			<view class="book-grid">
+				<view v-for="book in newBooks" :key="book.id" class="book-item" @click="navigateToBookDetail(book.id)">
+					<image :src="book.cover" class="book-cover" mode="aspectFit" />
+					<text class="book-title">{{ book.title }}</text>
+					<text class="book-price">¥{{ book.price }}</text>
 				</view>
 			</view>
 		</view>
 
-
-	</view>
-
-
-
-
-	<view class="content">
-		<image class="logo" src="/static/logo.png"></image>
-		<view class="text-area">
-			<text class="title">{{title}}</text>
-		</view>
-	</view>
-	
-	<view class="uni-padding-wrap uni-common-mt" style="background-color: burlywood;">
-		<view class="uni-flex uni-row" style=" justify-content:space-between;">
-			<view class="uni-flex uni-row">
-				<view class="flex-item uni-bg-red">
-					<view class="flex-item uni-column" style="padding: 12rpx; flex-wrap: nowrap;">开放时间</view>
-					<view class="flex-item uni-column" style="padding: 12rpx;">交通信息</view>
-					<view class="flex-item uni-column" style="padding: 12rpx;">分管流通点</view>
-				</view>
-				<view class="flex-item uni-bg-blue">
-					<view class="flex-item uni-column bigFontSize" style="text-align: center; padding:15rpx;">关于我们</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">图书馆简介</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">管史略览</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">领导集体</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">部门设置</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">业务统计</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">计划年报</view>
-				</view>
-				<view class="flex-item uni-bg-green">
-					<view class="flex-item uni-column bigFontSize" style="text-align: center; padding:15rpx;">相关链接</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">古籍保护网</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">广东省图书馆</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">新世纪图书馆</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">广东少儿图书馆</view>
-					<view class="flex-item uni-column commonFontSize" style="padding: 12rpx;">国家语言文字推广基地</view>
-				</view>
-			</view>
-			<view>
-				<view style="padding: 50rpx;">
-					<view class="flex-item uni-column" style="padding: 20rpx; text-align: center;">图书管理系统</view>
-					<view class="flex-item uni-column " style="text-align: center;">
-						<image src="/static/logo.png" style="width: 150rpx; height: 150rpx;"></image>
-					</view>
-					<view class="flex-item uni-column commonFontSize">扫码咨询图书管理员</view>
-					<view class="flex-item uni-column commonFontSize">电话咨询:1008611</view>
-				</view>
+		<!-- 底部导航 -->
+		<view class="footer-nav">
+			<view v-for="(nav, index) in navItems" :key="index" class="nav-item" @click="handleNavClick(nav, index)">
+				<uni-icons :type="nav.icon" size="24" :color="isCurrentPage(nav.path) ? '#1890ff' : '#666'" />
+				<text :class="{ active: isCurrentPage(nav.path) }">{{ nav.text }}</text>
 			</view>
 		</view>
-	</view>
 	</view>
 </template>
 
@@ -140,223 +74,382 @@
 	export default {
 		data() {
 			return {
-				title: 'Hello',
-				background: ['color1', 'color2', 'color3'],
-				indicatorDots: true,
-				autoplay: true,
-				interval: 5000,
-				duration: 500,
-				type: "default",
-				inverted: false,
+				searchKeyword: '',
+				activeTab: 0,
+				tabs: [{
+						name: '全部',
+						type: 'all'
+					},
+					{
+						name: '文学',
+						type: 'literature'
+					},
+					{
+						name: '科技',
+						type: 'technology'
+					},
+					{
+						name: '历史',
+						type: 'history'
+					},
+					{
+						name: '小说',
+						type: 'fiction'
+					}
+				],
+				banners: [{
+						id: 1,
+						image: '/static/banner1.jpg',
+						link: '/pages/promotion/1'
+					},
+					{
+						id: 2,
+						image: '/static/banner2.jpg',
+						link: '/pages/promotion/2'
+					},
+					{
+						id: 3,
+						image: '/static/banner3.jpg',
+						link: '/pages/promotion/3'
+					}
+				],
+				announcement: '系统维护通知：本周六凌晨2:00-4:00将进行系统升级，期间无法借阅图书。',
+				hotBooks: [],
+				newBooks: [],
+				navItems: [{
+						text: '首页',
+						icon: 'home',
+						path: '/pages/index/index'
+					},
+					{
+						text: '分类',
+						icon: 'list',
+						path: '/pages/content/content'
+					},
+					{
+						text: '借阅',
+						icon: 'cart',
+						path: '/pages/borrow/index'
+					},
+					{
+						text: '我的',
+						icon: 'person',
+						path: '/pages/user/user'
+					}
+				]
 			}
 		},
 		onLoad() {
-
+			this.loadData();
 		},
 		methods: {
-			goToPageContent(){
+			async loadData() {
+				try {
+					uni.showLoading({
+						title: '加载中...'
+					});
+
+					// 获取热门图书
+					const [hotRes, newRes] = await Promise.all([
+						uni.request({
+							url: '/api/books/hot'
+						}),
+						uni.request({
+							url: '/api/books/new'
+						})
+					]);
+
+					if (hotRes[1].code === 200) {
+						this.hotBooks = hotRes[1].data.slice(0, 5);
+					}
+
+					if (newRes[1].code === 200) {
+						this.newBooks = newRes[1].data.slice(0, 4);
+					}
+				} catch (error) {
+					console.error('数据加载失败:', error);
+					uni.showToast({
+						title: '数据加载失败',
+						icon: 'none'
+					});
+				} finally {
+					uni.hideLoading();
+				}
+			},
+
+			handleSearch() {
+				if (!this.searchKeyword.trim()) {
+					uni.showToast({
+						title: '请输入搜索内容',
+						icon: 'none'
+					});
+					return;
+				}
 				uni.navigateTo({
-					url:'/pages/content/content'
-				})
+					url: `/pages/search/result?keyword=${this.searchKeyword}`
+				});
 			},
-			goToPageIndex(){
+
+			clearSearch() {
+				this.searchKeyword = '';
+			},
+
+			switchTab(index) {
+				this.activeTab = index;
+				// 实际项目中这里应该加载对应分类的图书
+			},
+
+			handleBannerClick(item) {
 				uni.navigateTo({
-					url:'/pages/index/index'					
-				})
+					url: item.link
+				});
 			},
-			goToPageLogin(){
+
+			navigateToBookList(type) {
 				uni.navigateTo({
-					url:'/pages/login/login'
-				})
+					url: `/pages/book/list?type=${type}`
+				});
 			},
-			setType() {
-				let types = ["default", "primary", "success", "warning", "error"];
-				let index = types.indexOf(this.type);
-				types.splice(index, 1);
-				let randomIndex = Math.floor(Math.random() * 4);
-				this.type = types[randomIndex];
+
+			navigateToBookDetail(id) {
+				uni.navigateTo({
+					url: `/pages/book/detail?id=${id}`
+				});
 			},
-			setInverted() {
-				this.inverted = !this.inverted;
+
+			navigateToUserCenter() {
+				const currentUser = uni.getStorageSync('currentUser');
+				if (currentUser) {
+					// 已登录，跳转到用户中心
+					uni.switchTab({
+						url: '/pages/user/user'
+					});
+				} else {
+					// 未登录，跳转到登录页面
+					uni.navigateTo({
+						url: '/pages/login/login'
+					});
+				}
 			},
-			back() {
-				uni.navigateBack({
-					delta: 1
-				})
+
+			navigateToLogin() {
+				uni.navigateTo({
+					url: '/pages/login/login'
+				});
 			},
-			changeIndicatorDots(e) {
-				this.indicatorDots = !this.indicatorDots
+
+			isCurrentPage(path) {
+				const pages = getCurrentPages();
+				if (!pages.length) return false;
+				const currentPage = pages[pages.length - 1];
+				return currentPage.route === path.replace('/pages/', '').replace('/index', '');
 			},
-			changeAutoplay(e) {
-				this.autoplay = !this.autoplay
+
+			handleNavClick(nav, index) {
+				if (this.isCurrentPage(nav.path)) return;
+
+				// 特殊处理"我的"页面
+				if (nav.path === '/pages/user/user') {
+					const currentUser = uni.getStorageSync('currentUser');
+					if (currentUser) {
+						// 已登录，使用 switchTab 跳转到用户中心
+						uni.switchTab({
+							url: '/pages/user/user',
+							success: () => {
+								console.log('已跳转到用户中心');
+							},
+							fail: (err) => {
+								console.error('跳转失败:', err);
+							}
+						});
+					} else {
+						// 未登录，使用 navigateTo 跳转到登录页
+						uni.navigateTo({
+							url: '/pages/login/login',
+							success: () => {
+								console.log('跳转到登录页');
+							}
+						});
+					}
+					return;
+				}
+
+				// 其他导航项正常跳转
+				uni.switchTab({
+					url: nav.path
+				});
 			},
-			intervalChange(e) {
-				this.interval = e.target.value
-			},
-			durationChange(e) {
-				this.duration = e.target.value
-			},
-			search(res) {
-				uni.showToast({
-					title: '搜索：' + res.value,
-					icon: 'none'
-				})
-			},
-			input(res) {
-				console.log('----input:', res)
-			},
-			clear(res) {
-				uni.showToast({
-					title: 'clear事件，清除值为：' + res.value,
-					icon: 'none'
-				})
-			},
-			blur(res) {
-				uni.showToast({
-					title: 'blur事件，输入值为：' + res.value,
-					icon: 'none'
-				})
-			},
-			focus(e) {
-				uni.showToast({
-					title: 'focus事件，输出值为：' + e.value,
-					icon: 'none'
-				})
-			},
-			cancel(res) {
-				uni.showToast({
-					title: '点击取消，输入值为：' + res.value,
-					icon: 'none'
-				})
-			},
-			onBackPress() {
-				// #ifdef APP-PLUS
-				plus.key.hideSoftKeybord();
-				// #endif
+
+
+
+			handleBack() {
+				uni.navigateBack()
 			}
 		}
 	}
 </script>
 
-<style>
-	.uni-column {
-		flex-direction: column;
+<style scoped>
+	.index-container {
+		padding-bottom: 100rpx;
+		background-color: #f5f5f5;
+		min-height: 100vh;
 	}
 
-	.uni-row {
-		flex-direction: row;
+	.search-section {
+		padding: 20rpx;
+		background-color: #fff;
 	}
 
-	.uni-flex {
+	.category-tabs {
 		display: flex;
+		padding: 20rpx 0;
+		background-color: #fff;
+		border-bottom: 1rpx solid #eee;
 	}
 
-	.uni-bg-red {
-		background-color: red;
-	}
-
-	.uni-bg-green {
-		background-color: green;
-	}
-
-	.uni-bg-blue {
-		background-color: blue;
-	}
-
-	.uni-margin-wrap {
-		width: 690rpx;
-		width: 100%;
-	}
-
-	.swiper {
-		height: 300rpx;
-	}
-
-	.swiper-item {
-		display: block;
-		height: 300rpx;
-		line-height: 300rpx;
+	.tab-item {
+		flex: 1;
 		text-align: center;
-	}
-
-	.swiper-list {
-		margin-top: 40rpx;
-		margin-bottom: 0;
-	}
-
-	.uni-common-mt {
-		margin-top: 60rpx;
-		position: relative;
-	}
-
-	.info {
-		position: absolute;
-		right: 20rpx;
-	}
-
-	.uni-padding-wrap {
-		
-		padding: 0 100rpx;
-	}
-
-	.content {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.logo {
-		height: 200rpx;
-		width: 200rpx;
-		margin-top: 200rpx;
-		margin-left: auto;
-		margin-right: auto;
-		margin-bottom: 50rpx;
-	}
-
-	.text-area {
-		display: flex;
-		justify-content: center;
-	}
-
-	.title {
-		font-size: 36rpx;
-		color: #8f8f94;
-	}
-
-	.search-result {
-		padding-top: 10px;
-		padding-bottom: 20px;
-		text-align: center;
-	}
-
-	.search-result-text {
-		text-align: center;
-		font-size: 14px;
+		padding: 15rpx 0;
+		font-size: 28rpx;
 		color: #666;
 	}
 
-	.example-body {
-		/* #ifndef APP-NVUE */
-		display: flex;
-		/* #endif */
+	.tab-item.active {
+		color: #1890ff;
+		position: relative;
+	}
+
+	.tab-item.active::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 60rpx;
+		height: 4rpx;
+		background-color: #1890ff;
+	}
+
+	.swiper-container {
 		padding: 20rpx;
-      
+		background-color: #fff;
 	}
 
-	.uni-mt-10 {
-		margin-top: 10px;
+	.banner-image {
+		width: 100%;
+		height: 300rpx;
+		border-radius: 12rpx;
 	}
 
-	.box-bg {
-		background-color: #F5F5F5;
-		padding: 5px 0;
+	.section {
+		margin-top: 20rpx;
+		padding: 20rpx;
+		background-color: #fff;
 	}
-	.bigFontSize{
-		font-size: 15px;
+
+	.section-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 20rpx;
 	}
-	.commonFontSize{
-		font-size: 10px;
+
+	.section-title {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #333;
+	}
+
+	.more {
+		font-size: 26rpx;
+		color: #999;
+	}
+
+	.book-scroll {
+		white-space: nowrap;
+		width: 100%;
+	}
+
+	.book-card {
+		display: inline-block;
+		width: 200rpx;
+		margin-right: 20rpx;
+	}
+
+	.book-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: 20rpx;
+	}
+
+	.book-item {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.book-cover {
+		width: 100%;
+		height: 300rpx;
+		border-radius: 8rpx;
+		margin-bottom: 10rpx;
+	}
+
+	.book-title {
+		font-size: 28rpx;
+		color: #333;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.book-author {
+		font-size: 24rpx;
+		color: #999;
+	}
+
+	.book-price {
+		font-size: 26rpx;
+		color: #e74c3c;
+		font-weight: bold;
+	}
+
+	.footer-nav {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		display: flex;
+		justify-content: space-around;
+		padding: 15rpx 0;
+		background-color: #fff;
+		border-top: 1rpx solid #eee;
+		z-index: 100;
+	}
+
+	.nav-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 10rpx 0;
+		/* 添加点击效果 */
+		transition: all 0.3s;
+	}
+
+	.nav-item:active {
+		opacity: 0.7;
+		transform: scale(0.95);
+	}
+
+	.nav-item text {
+		font-size: 24rpx;
+		color: #666;
+		margin-top: 5rpx;
+		transition: color 0.3s;
+	}
+
+	.nav-item text.active {
+		color: #1890ff;
 	}
 </style>

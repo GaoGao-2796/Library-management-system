@@ -1,823 +1,1210 @@
 <template>
-	<view class="container">
-		<!-- 顶部导航栏 -->
-		<view class="header">
-			<view class="admin-info">
-				<text>管理员 {{adminName}}</text>
-				<text class="logout" @click="handleLogout">退出管理台</text>
-			</view>
-			<view class="breadcrumb">
-				<text>首页 / 图书管理</text>
-			</view>
-		</view>
+  <view class="book-manager-container">
+    <!-- 顶部管理导航 -->
+    <uni-nav-bar 
+      :fixed="true"
+      left-icon="left"
+      title="图书管理"
+      @clickLeft="handleBack"
+    >
+      <template #right>
+        <uni-icons 
+          type="plus" 
+          size="24" 
+          color="#1890ff"
+          @click="showAddDialog"
+        />
+      </template>
+    </uni-nav-bar>
 
-		<uni-section title="实心标签" type="line" padding>
-			<view class="example-body">
-				<view class="tag-view" style="padding-left: 25rpx;" @click="goToPageIndex('/pages/index/index')">
-					<uni-tag text="首页" type="primary" />
-				</view>
-				<view class="tag-view" style="padding-left: 25rpx;" @click="goToPageContent('/pages/content/content')">
-					<uni-tag text="大全" type="success" />
-				</view>
-				<view class="tag-view" style="padding-left: 25rpx;">
-					<uni-tag text="咨询" type="warning" />
-				</view>
-				<view class="tag-view" style="padding-left: 25rpx;" @click="goToPageLogin('/pages/login/login')">
-					<uni-tag text="个人" type="error" />
-				</view>
-			</view>
-		</uni-section>
+    <!-- 搜索和筛选区域 -->
+    <view class="search-filter-bar">
+      <uni-search-bar 
+        v-model="searchKeyword"
+        placeholder="搜索图书名称/ISBN"
+        @confirm="loadBookList"
+        @clear="clearSearch"
+        radius="100"
+        clear-button="auto"
+      />
+      
+      <view class="filter-row">
+        <picker 
+          class="filter-picker"
+          mode="selector" 
+          :range="filterOptions.status" 
+          range-key="label"
+          @change="onStatusChange"
+        >
+          <view class="picker-content">
+            <text>{{ selectedStatus.label || '全部状态' }}</text>
+            <uni-icons type="arrowdown" size="14" color="#666"></uni-icons>
+          </view>
+        </picker>
+        
+        <picker 
+          class="filter-picker"
+          mode="selector" 
+          :range="filterOptions.categories" 
+          range-key="label"
+          @change="onCategoryChange"
+        >
+          <view class="picker-content">
+            <text>{{ selectedCategory.label || '全部分类' }}</text>
+            <uni-icons type="arrowdown" size="14" color="#666"></uni-icons>
+          </view>
+        </picker>
+      </view>
+    </view>
 
-		<!-- 搜索和筛选区域 -->
-		<view class="search-filter">
-			<view class="search-box">
-				<input class="search-input" v-model="searchKeyword" placeholder="请输入图书名称" @confirm="handleSearch" />
-				<button class="search-btn" @click="handleSearch">查询</button>
-			</view>
+    <!-- 图书列表表格 -->
+    <scroll-view 
+      scroll-y 
+      class="book-list-container"
+      :style="{ height: scrollViewHeight }"
+    >
+      <view class="book-list-header">
+        <text class="header-cell" style="width: 10%;">封面</text>
+        <text class="header-cell" style="width: 20%;">书名</text>
+        <text class="header-cell" style="width: 15%;">作者</text>
+        <text class="header-cell" style="width: 10%;">库存</text>
+        <text class="header-cell" style="width: 10%;">价格</text>
+        <text class="header-cell" style="width: 15%;">状态</text>
+        <text class="header-cell" style="width: 20%;">操作</text>
+      </view>
+      
+      <view 
+        class="book-list-row"
+        v-for="book in bookList"
+        :key="book.id"
+        @click="showBookDetail(book)"
+      >
+        <view class="row-cell" style="width: 10%;">
+          <image 
+            :src="book.cover || '/static/default-book.png'" 
+            class="book-cover"
+            mode="aspectFit"
+          />
+        </view>
+        <view class="row-cell" style="width: 20%;">{{ book.title }}</view>
+        <view class="row-cell" style="width: 15%;">{{ book.author }}</view>
+        <view class="row-cell" style="width: 10%;">{{ book.stock }}</view>
+        <view class="row-cell" style="width: 10%;">¥{{ book.price }}</view>
+        <view class="row-cell" style="width: 15%;">
+          <text :class="['status-badge', book.status]">
+            {{ book.status | statusText }}
+          </text>
+        </view>
+        <view class="row-cell actions" style="width: 20%;">
+          <uni-icons 
+            type="compose" 
+            size="20" 
+            color="#1890ff"
+            @click.stop="editBook(book)"
+          />
+          <uni-icons 
+            type="trash" 
+            size="20" 
+            color="#f56c6c"
+            @click.stop="confirmDelete(book.id)"
+          />
+        </view>
+      </view>
+      
+      <!-- 空状态 -->
+      <view class="empty-placeholder" v-if="bookList.length === 0">
+        <uni-icons type="info" size="50" color="#999"></uni-icons>
+        <text>暂无图书数据</text>
+      </view>
+      
+      <!-- 分页控件 -->
+      <view class="pagination" v-if="bookList.length > 0">
+        <button 
+          :disabled="currentPage === 1"
+          @click="prevPage"
+        >
+          上一页
+        </button>
+        <text class="page-info">{{ currentPage }}/{{ totalPages }}</text>
+        <button 
+          :disabled="currentPage === totalPages"
+          @click="nextPage"
+        >
+          下一页
+        </button>
+      </view>
+    </scroll-view>
 
-			<view class="filter-box">
-				<picker class="type-picker" mode="selector" :range="bookTypes" range-key="name" @change="onTypeChange">
-					<view class="picker-text">
-						{{selectedType ? selectedType.name : '请选择图书类型'}}
-					</view>
-				</picker>
-			</view>
+    <!-- 图书详情抽屉 -->
+    <uni-drawer 
+      ref="detailDrawer"
+      mode="right"
+      :width="700"
+      @change="onDrawerChange"
+    >
+      <view class="drawer-content" v-if="currentBook">
+        <!-- 详情头部 -->
+        <view class="detail-header">
+          <text class="detail-title">图书详情</text>
+          <uni-icons 
+            type="close" 
+            size="24" 
+            color="#999"
+            @click="closeDetail"
+          />
+        </view>
+        
+        <!-- 详情内容 -->
+        <scroll-view scroll-y class="detail-body">
+          <view class="detail-section">
+            <image 
+              :src="currentBook.cover || '/static/default-book.png'"
+              class="detail-cover"
+              mode="aspectFit"
+            />
+            
+            <view class="basic-info">
+              <text class="book-title">{{ currentBook.title }}</text>
+              <text class="book-meta">ISBN: {{ currentBook.isbn }}</text>
+              <text class="book-meta">作者: {{ currentBook.author }}</text>
+              <text class="book-meta">出版社: {{ currentBook.publisher }}</text>
+              <text class="book-meta">出版日期: {{ currentBook.publish_date }}</text>
+              
+              <view class="price-stock">
+                <text class="price">¥{{ currentBook.price }}</text>
+                <text class="stock">库存: {{ currentBook.stock }}本</text>
+              </view>
+              
+              <text class="status" :class="currentBook.status">
+                {{ currentBook.status | statusText }}
+              </text>
+            </view>
+          </view>
+          
+          <view class="detail-section">
+            <view class="section-title">图书简介</view>
+            <text class="book-description">
+              {{ currentBook.description || '暂无简介' }}
+            </text>
+          </view>
+          
+          <view class="detail-section">
+            <view class="section-title">详细信息</view>
+            <view class="info-grid">
+              <view class="info-item">
+                <text class="info-label">分类:</text>
+                <text class="info-value">{{ currentBook.category_name }}</text>
+              </view>
+              <view class="info-item">
+                <text class="info-label">页数:</text>
+                <text class="info-value">{{ currentBook.pages }}页</text>
+              </view>
+              <view class="info-item">
+                <text class="info-label">语言:</text>
+                <text class="info-value">{{ currentBook.language }}</text>
+              </view>
+              <view class="info-item">
+                <text class="info-label">点击量:</text>
+                <text class="info-value">{{ currentBook.click_count }}</text>
+              </view>
+              <view class="info-item">
+                <text class="info-label">上架时间:</text>
+                <text class="info-value">{{ currentBook.create_time }}</text>
+              </view>
+              <view class="info-item">
+                <text class="info-label">最后更新:</text>
+                <text class="info-value">{{ currentBook.update_time }}</text>
+              </view>
+            </view>
+          </view>
+        </scroll-view>
+        
+        <!-- 操作按钮 -->
+        <view class="detail-footer">
+          <button 
+            class="action-btn status-btn"
+            :class="{ 'offline': currentBook.status === 'online' }"
+            @click="toggleBookStatus"
+          >
+            {{ currentBook.status === 'online' ? '下架图书' : '上架图书' }}
+          </button>
+          
+          <button 
+            class="action-btn edit-btn"
+            @click="editCurrentBook"
+          >
+            编辑图书
+          </button>
+          
+          <button 
+            class="action-btn delete-btn"
+            @click="confirmDelete(currentBook.id)"
+          >
+            删除图书
+          </button>
+        </view>
+      </view>
+    </uni-drawer>
 
-			<view class="action-btns">
-				<button class="add-btn" @click="showAddDialog">+ 新增</button>
-				<button class="delete-btn" @click="batchDelete">删除</button>
-			</view>
-		</view>
-
-		<!-- 图书列表表格 -->
-		<view class="book-table">
-			<view class="table-header">
-				<view class="header-cell" style="width: 5%;">索引</view>
-				<view class="header-cell" style="width: 15%;">图书名称</view>
-				<view class="header-cell" style="width: 10%;">图书图片</view>
-				<view class="header-cell" style="width: 10%;">图书类型</view>
-				<view class="header-cell" style="width: 8%;">图书库存</view>
-				<view class="header-cell" style="width: 10%;">购买获得积分</view>
-				<view class="header-cell" style="width: 8%;">图书原价</view>
-				<view class="header-cell" style="width: 8%;">现价</view>
-				<view class="header-cell" style="width: 8%;">点击次数</view>
-				<view class="header-cell" style="width: 8%;">层层上限</view>
-				<view class="header-cell" style="width: 10%;">操作</view>
-			</view>
-
-			<view class="table-body">
-				<view class="table-row" v-for="(book, index) in bookList" :key="book.id">
-					<view class="body-cell" style="width: 5%;">{{index + 1}}</view>
-					<view class="body-cell" style="width: 15%;">{{book.name}}</view>
-					<view class="body-cell" style="width: 10%;">
-						<image class="book-image" :src="book.image || '/static/default-book.png'" mode="aspectFit">
-						</image>
-					</view>
-					<view class="body-cell" style="width: 10%;">{{book.type_name}}</view>
-					<view class="body-cell" style="width: 8%;">{{book.stock}}</view>
-					<view class="body-cell" style="width: 10%;">{{book.points}}</view>
-					<view class="body-cell" style="width: 8%;">{{book.original_price}}</view>
-					<view class="body-cell" style="width: 8%;">{{book.current_price}}</view>
-					<view class="body-cell" style="width: 8%;">{{book.click_count}}</view>
-					<view class="body-cell" style="width: 8%;">{{book.layer_limit}}</view>
-					<view class="body-cell action-cell" style="width: 10%;">
-						<text class="action-btn" @click="toggleStatus(book)">{{book.status ? '上架' : '下架'}}</text>
-						<text class="action-btn" @click="showDetail(book)">详情</text>
-						<text class="action-btn" @click="editBook(book)">修改</text>
-						<text class="action-btn" @click="deleteBook(book.id)">删除</text>
-					</view>
-				</view>
-			</view>
-		</view>
-
-		<!-- 分页控件 -->
-		<view class="pagination">
-			<text class="page-info">共 {{total}} 条记录</text>
-			<view class="page-controls">
-				<button :disabled="currentPage === 1" @click="prevPage">上一页</button>
-				<text class="page-current">{{currentPage}}/{{totalPages}}</text>
-				<button :disabled="currentPage === totalPages" @click="nextPage">下一页</button>
-			</view>
-		</view>
-
-		<!-- 新增/编辑对话框 -->
-		<uni-popup ref="bookDialog" type="dialog">
-			<uni-popup-dialog mode="base" :title="dialogTitle" @confirm="confirmDialog">
-				<view class="dialog-form">
-					<view class="form-item">
-						<text class="form-label">图书名称:</text>
-						<input class="form-input" v-model="currentBook.name" placeholder="请输入图书名称" />
-					</view>
-					<view class="form-item">
-						<text class="form-label">图书类型:</text>
-						<picker mode="selector" :range="bookTypes" range-key="name" @change="onDialogTypeChange">
-							<view class="form-input">{{currentBook.type_name || '请选择图书类型'}}</view>
-						</picker>
-					</view>
-					<view class="form-item">
-						<text class="form-label">图书库存:</text>
-						<input class="form-input" type="number" v-model="currentBook.stock" placeholder="请输入库存数量" />
-					</view>
-					<view class="form-item">
-						<text class="form-label">图书原价:</text>
-						<input class="form-input" type="number" v-model="currentBook.original_price"
-							placeholder="请输入原价" />
-					</view>
-					<view class="form-item">
-						<text class="form-label">现价:</text>
-						<input class="form-input" type="number" v-model="currentBook.current_price"
-							placeholder="请输入现价" />
-					</view>
-					<view class="form-item">
-						<text class="form-label">购买获得积分:</text>
-						<input class="form-input" type="number" v-model="currentBook.points" placeholder="请输入购买获得积分" />
-					</view>
-					<view class="form-item" v-if="dialogTitle === '新增图书'">
-						<text class="form-label">图书图片:</text>
-						<button @click="chooseImage">选择图片</button>
-						<image v-if="currentBook.image" :src="currentBook.image" class="preview-image"></image>
-					</view>
-				</view>
-			</uni-popup-dialog>
-		</uni-popup>
-
-		<!-- 详情对话框 -->
-		<uni-popup ref="detailDialog" type="dialog">
-			<uni-popup-dialog mode="base" title="图书详情" @confirm="closeDetailDialog">
-				<view class="detail-content" v-if="selectedBook">
-					<image :src="selectedBook.image" class="detail-image"></image>
-					<view class="detail-row">
-						<text class="detail-label">图书名称:</text>
-						<text class="detail-value">{{selectedBook.name}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">图书类型:</text>
-						<text class="detail-value">{{selectedBook.type_name}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">库存数量:</text>
-						<text class="detail-value">{{selectedBook.stock}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">原价:</text>
-						<text class="detail-value">{{selectedBook.original_price}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">现价:</text>
-						<text class="detail-value">{{selectedBook.current_price}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">购买积分:</text>
-						<text class="detail-value">{{selectedBook.points}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">点击次数:</text>
-						<text class="detail-value">{{selectedBook.click_count}}</text>
-					</view>
-					<view class="detail-row">
-						<text class="detail-label">状态:</text>
-						<text class="detail-value">{{selectedBook.status ? '上架' : '下架'}}</text>
-					</view>
-				</view>
-			</uni-popup-dialog>
-		</uni-popup>
-	</view>
+    <!-- 新增/编辑弹窗 -->
+    <uni-popup ref="bookDialog" type="dialog">
+      <uni-popup-dialog 
+        :title="dialogTitle"
+        mode="base"
+        @confirm="submitBookForm"
+        @close="closeDialog"
+      >
+        <view class="dialog-form">
+          <view class="form-item">
+            <text class="form-label">图书名称:</text>
+            <input 
+              class="form-input"
+              v-model="bookForm.title"
+              placeholder="请输入图书名称"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">ISBN编号:</text>
+            <input 
+              class="form-input"
+              v-model="bookForm.isbn"
+              placeholder="请输入ISBN编号"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">图书分类:</text>
+            <picker 
+              mode="selector"
+              :range="filterOptions.categories"
+              range-key="label"
+              @change="onFormCategoryChange"
+            >
+              <view class="form-input">
+                {{ bookForm.category_name || '请选择分类' }}
+              </view>
+            </picker>
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">作者:</text>
+            <input 
+              class="form-input"
+              v-model="bookForm.author"
+              placeholder="请输入作者"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">出版社:</text>
+            <input 
+              class="form-input"
+              v-model="bookForm.publisher"
+              placeholder="请输入出版社"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">价格:</text>
+            <input 
+              class="form-input"
+              type="number"
+              v-model="bookForm.price"
+              placeholder="请输入价格"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">库存:</text>
+            <input 
+              class="form-input"
+              type="number"
+              v-model="bookForm.stock"
+              placeholder="请输入库存数量"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">图书封面:</text>
+            <button 
+              class="upload-btn"
+              @click="chooseImage"
+            >
+              选择图片
+            </button>
+            <image 
+              v-if="bookForm.cover"
+              :src="bookForm.cover"
+              class="cover-preview"
+              mode="aspectFit"
+            />
+          </view>
+          
+          <view class="form-item">
+            <text class="form-label">图书简介:</text>
+            <textarea 
+              class="form-textarea"
+              v-model="bookForm.description"
+              placeholder="请输入图书简介"
+            />
+          </view>
+        </view>
+      </uni-popup-dialog>
+    </uni-popup>
+    
+    <!-- 删除确认弹窗 -->
+    <uni-popup ref="deleteDialog" type="dialog">
+      <uni-popup-dialog 
+        type="warn"
+        title="确认删除"
+        :content="`确认删除这本图书吗？此操作不可恢复！`"
+        @confirm="deleteBook"
+        @close="closeDeleteDialog"
+      />
+    </uni-popup>
+  </view>
 </template>
 
 <script>
-	export default {
-		data() {
-			return {
-				adminName: 'admin',
-				searchKeyword: '',
-				selectedType: null,
-				bookTypes: [],
-				bookList: [],
-				currentPage: 1,
-				pageSize: 10,
-				total: 0,
-				dialogTitle: '新增图书',
-				currentBook: {
-					id: null,
-					name: '',
-					type_id: null,
-					type_name: '',
-					stock: 0,
-					points: 0,
-					original_price: 0,
-					current_price: 0,
-					click_count: 0,
-					layer_limit: 0,
-					status: 1,
-					image: ''
-				},
-				selectedBook: null,
-				selectedIds: [],
-				uploadUrl: 'https://your-api-domain.com/api/upload' // 文件上传接口
-			}
-		},
-		computed: {
-			totalPages() {
-				return Math.ceil(this.total / this.pageSize);
-			}
-		},
-		methods: {
-			goToPageContent() {
-				uni.navigateTo({
-					url: '/pages/content/content'
-				})
-			},
-			goToPageIndex() {
-				uni.navigateTo({
-					url: '/pages/index/index'
-				})
-			},
-			goToPageLogin() {
-				uni.navigateTo({
-					url: '/pages/login/login'
-				})
-			},
-			// 获取图书列表
-			async fetchBooks() {
-				try {
-					uni.showLoading({
-						title: '加载中...'
-					});
-
-					const params = {
-						page: this.currentPage,
-						page_size: this.pageSize,
-						keyword: this.searchKeyword,
-						type_id: this.selectedType ? this.selectedType.id : null
-					};
-
-					const res = await uni.request({
-						url: 'https://your-api-domain.com/api/books',
-						method: 'GET',
-						data: params
-					});
-
-					if (res.data.code === 200) {
-						this.bookList = res.data.data.list;
-						this.total = res.data.data.total;
-					} else {
-						uni.showToast({
-							title: res.data.message,
-							icon: 'none'
-						});
-					}
-				} catch (error) {
-					console.error('获取图书列表失败:', error);
-					uni.showToast({
-						title: '获取数据失败',
-						icon: 'none'
-					});
-				} finally {
-					uni.hideLoading();
-				}
-			},
-
-			// 获取图书类型
-			async fetchBookTypes() {
-				try {
-					const res = await uni.request({
-						url: 'https://your-api-domain.com/api/book-types',
-						method: 'GET'
-					});
-
-					if (res.data.code === 200) {
-						this.bookTypes = res.data.data;
-					}
-				} catch (error) {
-					console.error('获取图书类型失败:', error);
-				}
-			},
-
-			// 搜索图书
-			handleSearch() {
-				this.currentPage = 1;
-				this.fetchBooks();
-			},
-
-			// 选择图书类型
-			onTypeChange(e) {
-				this.selectedType = this.bookTypes[e.detail.value];
-				this.currentPage = 1;
-				this.fetchBooks();
-			},
-
-			// 对话框中选择图书类型
-			onDialogTypeChange(e) {
-				const selected = this.bookTypes[e.detail.value];
-				this.currentBook.type_id = selected.id;
-				this.currentBook.type_name = selected.name;
-			},
-
-			// 分页控制
-			prevPage() {
-				if (this.currentPage > 1) {
-					this.currentPage--;
-					this.fetchBooks();
-				}
-			},
-
-			nextPage() {
-				if (this.currentPage < this.totalPages) {
-					this.currentPage++;
-					this.fetchBooks();
-				}
-			},
-
-			// 显示新增对话框
-			showAddDialog() {
-				this.dialogTitle = '新增图书';
-				this.currentBook = {
-					id: null,
-					name: '',
-					type_id: null,
-					type_name: '',
-					stock: 0,
-					points: 0,
-					original_price: 0,
-					current_price: 0,
-					click_count: 0,
-					layer_limit: 0,
-					status: 1,
-					image: ''
-				};
-				this.$refs.bookDialog.open();
-			},
-
-			// 编辑图书
-			editBook(book) {
-				this.dialogTitle = '编辑图书';
-				this.currentBook = {
-					...book
-				};
-				this.$refs.bookDialog.open();
-			},
-
-			// 确认对话框（新增/编辑）
-			async confirmDialog() {
-				if (!this.currentBook.name) {
-					uni.showToast({
-						title: '请输入图书名称',
-						icon: 'none'
-					});
-					return;
-				}
-
-				try {
-					uni.showLoading({
-						title: '提交中...'
-					});
-
-					const url = this.currentBook.id ?
-						`https://your-api-domain.com/api/books/${this.currentBook.id}` :
-						'https://your-api-domain.com/api/books';
-
-					const method = this.currentBook.id ? 'PUT' : 'POST';
-
-					const res = await uni.request({
-						url,
-						method,
-						data: this.currentBook
-					});
-
-					if (res.data.code === 200) {
-						uni.showToast({
-							title: '操作成功',
-							icon: 'success'
-						});
-						this.$refs.bookDialog.close();
-						this.fetchBooks();
-					} else {
-						uni.showToast({
-							title: res.data.message,
-							icon: 'none'
-						});
-					}
-				} catch (error) {
-					console.error('操作失败:', error);
-					uni.showToast({
-						title: '操作失败',
-						icon: 'none'
-					});
-				} finally {
-					uni.hideLoading();
-				}
-			},
-
-			// 切换图书状态
-			async toggleStatus(book) {
-				try {
-					uni.showLoading({
-						title: '处理中...'
-					});
-
-					const res = await uni.request({
-						url: `https://your-api-domain.com/api/books/${book.id}/status`,
-						method: 'PUT',
-						data: {
-							status: book.status ? 0 : 1
-						}
-					});
-
-					if (res.data.code === 200) {
-						book.status = book.status ? 0 : 1;
-						uni.showToast({
-							title: book.status ? '已上架' : '已下架',
-							icon: 'success'
-						});
-					} else {
-						uni.showToast({
-							title: res.data.message,
-							icon: 'none'
-						});
-					}
-				} catch (error) {
-					console.error('操作失败:', error);
-					uni.showToast({
-						title: '操作失败',
-						icon: 'none'
-					});
-				} finally {
-					uni.hideLoading();
-				}
-			},
-
-			// 显示详情
-			showDetail(book) {
-				this.selectedBook = {
-					...book
-				};
-				this.$refs.detailDialog.open();
-			},
-
-			// 关闭详情对话框
-			closeDetailDialog() {
-				this.$refs.detailDialog.close();
-			},
-
-			// 删除图书
-			async deleteBook(id) {
-				uni.showModal({
-					title: '提示',
-					content: '确定要删除这本图书吗?',
-					success: async (res) => {
-						if (res.confirm) {
-							try {
-								uni.showLoading({
-									title: '删除中...'
-								});
-
-								const result = await uni.request({
-									url: `https://your-api-domain.com/api/books/${id}`,
-									method: 'DELETE'
-								});
-
-								if (result.data.code === 200) {
-									uni.showToast({
-										title: '删除成功',
-										icon: 'success'
-									});
-									this.fetchBooks();
-								} else {
-									uni.showToast({
-										title: result.data.message,
-										icon: 'none'
-									});
-								}
-							} catch (error) {
-								console.error('删除失败:', error);
-								uni.showToast({
-									title: '删除失败',
-									icon: 'none'
-								});
-							} finally {
-								uni.hideLoading();
-							}
-						}
-					}
-				});
-			},
-
-			// 批量删除
-			batchDelete() {
-				if (this.selectedIds.length === 0) {
-					uni.showToast({
-						title: '请先选择要删除的图书',
-						icon: 'none'
-					});
-					return;
-				}
-
-				uni.showModal({
-					title: '提示',
-					content: `确定要删除选中的${this.selectedIds.length}本图书吗?`,
-					success: async (res) => {
-						if (res.confirm) {
-							try {
-								uni.showLoading({
-									title: '删除中...'
-								});
-
-								const result = await uni.request({
-									url: 'https://your-api-domain.com/api/books/batch',
-									method: 'DELETE',
-									data: {
-										ids: this.selectedIds
-									}
-								});
-
-								if (result.data.code === 200) {
-									uni.showToast({
-										title: '删除成功',
-										icon: 'success'
-									});
-									this.selectedIds = [];
-									this.fetchBooks();
-								} else {
-									uni.showToast({
-										title: result.data.message,
-										icon: 'none'
-									});
-								}
-							} catch (error) {
-								console.error('批量删除失败:', error);
-								uni.showToast({
-									title: '删除失败',
-									icon: 'none'
-								});
-							} finally {
-								uni.hideLoading();
-							}
-						}
-					}
-				});
-			},
-
-			// 选择图片
-			async chooseImage() {
-				try {
-					const res = await uni.chooseImage({
-						count: 1,
-						sizeType: ['compressed'],
-						sourceType: ['album', 'camera']
-					});
-
-					if (res.tempFilePaths.length > 0) {
-						uni.showLoading({
-							title: '上传中...'
-						});
-
-						const uploadRes = await uni.uploadFile({
-							url: this.uploadUrl,
-							filePath: res.tempFilePaths[0],
-							name: 'file',
-							formData: {
-								type: 'book'
-							}
-						});
-
-						const data = JSON.parse(uploadRes[1].data);
-						if (data.code === 200) {
-							this.currentBook.image = data.data.url;
-						} else {
-							uni.showToast({
-								title: '上传失败',
-								icon: 'none'
-							});
-						}
-					}
-				} catch (error) {
-					console.error('选择图片失败:', error);
-					uni.showToast({
-						title: '选择图片失败',
-						icon: 'none'
-					});
-				} finally {
-					uni.hideLoading();
-				}
-			},
-
-			// 退出登录
-			handleLogout() {
-				uni.showModal({
-					title: '提示',
-					content: '确定要退出管理系统吗?',
-					success: (res) => {
-						if (res.confirm) {
-							uni.removeStorageSync('token');
-							uni.redirectTo({
-								url: '/pages/login/login'
-							});
-						}
-					}
-				});
-			}
-		},
-		onLoad() {
-			this.fetchBookTypes();
-			this.fetchBooks();
-		}
-	}
+export default {
+  filters: {
+    statusText(status) {
+      const map = {
+        'online': '在售',
+        'offline': '下架',
+        'soldout': '缺货'
+      };
+      return map[status] || '未知';
+    }
+  },
+  data() {
+    return {
+      scrollViewHeight: 'calc(100vh - 320rpx)',
+      searchKeyword: '',
+      currentPage: 1,
+      pageSize: 10,
+      total: 0,
+      bookList: [],
+      currentBook: null,
+      isDrawerOpen: false,
+      filterOptions: {
+        status: [
+          { label: '全部状态', value: '' },
+          { label: '在售', value: 'online' },
+          { label: '下架', value: 'offline' },
+          { label: '缺货', value: 'soldout' }
+        ],
+        categories: [
+          { label: '文学', value: 'literature' },
+          { label: '科技', value: 'technology' },
+          { label: '历史', value: 'history' },
+          { label: '小说', value: 'fiction' }
+        ]
+      },
+      selectedStatus: { label: '全部状态', value: '' },
+      selectedCategory: { label: '全部分类', value: '' },
+      dialogTitle: '新增图书',
+      bookForm: {
+        id: null,
+        title: '',
+        isbn: '',
+        category_id: null,
+        category_name: '',
+        author: '',
+        publisher: '',
+        price: '',
+        stock: '',
+        cover: '',
+        description: '',
+        status: 'online'
+      },
+      deleteId: null
+    }
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.total / this.pageSize);
+    }
+  },
+  onLoad() {
+    this.calculateScrollHeight();
+    this.loadBookList();
+  },
+  onReady() {
+    // 监听窗口变化调整滚动区域高度
+    uni.onWindowResize(() => {
+      this.calculateScrollHeight();
+    });
+  },
+  onUnload() {
+    uni.offWindowResize();
+  },
+  methods: {
+    // 计算滚动区域高度
+    calculateScrollHeight() {
+      const query = uni.createSelectorQuery().in(this);
+      query.select('.search-filter-bar').boundingClientRect(data => {
+        const systemInfo = uni.getSystemInfoSync();
+        const navBarHeight = 44; // 导航栏高度
+        const statusBarHeight = systemInfo.statusBarHeight || 20;
+        const barHeight = data.height + navBarHeight + statusBarHeight + 10;
+        this.scrollViewHeight = `calc(100vh - ${barHeight}px)`;
+      }).exec();
+    },
+    
+    // 加载图书列表
+    async loadBookList() {
+      try {
+        uni.showLoading({ title: '加载中...' });
+        
+        const params = {
+          page: this.currentPage,
+          page_size: this.pageSize,
+          keyword: this.searchKeyword,
+          status: this.selectedStatus.value,
+          category: this.selectedCategory.value
+        };
+        
+        const res = await uni.request({
+          url: '/api/books',
+          method: 'GET',
+          data: params
+        });
+        
+        if (res[1].statusCode === 200) {
+          this.bookList = res[1].data.list;
+          this.total = res[1].data.total;
+        } else {
+          throw new Error(res[1].data.message || '加载失败');
+        }
+      } catch (error) {
+        console.error('加载图书列表失败:', error);
+        uni.showToast({
+          title: '加载数据失败',
+          icon: 'none'
+        });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    
+    // 显示图书详情
+    showBookDetail(book) {
+      this.currentBook = { ...book };
+      this.$refs.detailDrawer.open();
+      
+      // 更新点击量
+      this.updateClickCount(book.id);
+    },
+    
+    // 更新点击量
+    async updateClickCount(bookId) {
+      try {
+        await uni.request({
+          url: `/api/books/${bookId}/click`,
+          method: 'PUT'
+        });
+      } catch (error) {
+        console.error('更新点击量失败:', error);
+      }
+    },
+    
+    // 关闭详情抽屉
+    closeDetail() {
+      this.$refs.detailDrawer.close();
+    },
+    
+    // 抽屉状态变化
+    onDrawerChange(open) {
+      this.isDrawerOpen = open;
+    },
+    
+    // 状态筛选
+    onStatusChange(e) {
+      this.selectedStatus = this.filterOptions.status[e.detail.value];
+      this.currentPage = 1;
+      this.loadBookList();
+    },
+    
+    // 分类筛选
+    onCategoryChange(e) {
+      this.selectedCategory = this.filterOptions.categories[e.detail.value];
+      this.currentPage = 1;
+      this.loadBookList();
+    },
+    
+    // 表单分类选择
+    onFormCategoryChange(e) {
+      const selected = this.filterOptions.categories[e.detail.value];
+      this.bookForm.category_id = selected.value;
+      this.bookForm.category_name = selected.label;
+    },
+    
+    // 清空搜索
+    clearSearch() {
+      this.searchKeyword = '';
+      this.loadBookList();
+    },
+    
+    // 分页控制
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.loadBookList();
+      }
+    },
+    
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+        this.loadBookList();
+      }
+    },
+    
+    // 显示新增弹窗
+    showAddDialog() {
+      this.dialogTitle = '新增图书';
+      this.resetBookForm();
+      this.$refs.bookDialog.open();
+    },
+    
+    // 编辑图书
+    editBook(book) {
+      this.dialogTitle = '编辑图书';
+      this.bookForm = { ...book };
+      this.$refs.bookDialog.open();
+    },
+    
+    // 编辑当前图书
+    editCurrentBook() {
+      this.editBook(this.currentBook);
+      this.closeDetail();
+    },
+    
+    // 重置表单
+    resetBookForm() {
+      this.bookForm = {
+        id: null,
+        title: '',
+        isbn: '',
+        category_id: null,
+        category_name: '',
+        author: '',
+        publisher: '',
+        price: '',
+        stock: '',
+        cover: '',
+        description: '',
+        status: 'online'
+      };
+    },
+    
+    // 关闭弹窗
+    closeDialog() {
+      this.$refs.bookDialog.close();
+    },
+    
+    // 提交表单
+    async submitBookForm() {
+      if (!this.validateBookForm()) return;
+      
+      try {
+        uni.showLoading({ title: '提交中...' });
+        
+        const url = this.bookForm.id ? 
+          `/api/books/${this.bookForm.id}` : 
+          '/api/books';
+        
+        const method = this.bookForm.id ? 'PUT' : 'POST';
+        
+        const res = await uni.request({
+          url,
+          method,
+          data: this.bookForm
+        });
+        
+        if (res[1].statusCode === 200) {
+          uni.showToast({
+            title: '操作成功',
+            icon: 'success'
+          });
+          this.closeDialog();
+          this.loadBookList();
+          
+          // 如果当前正在查看该书的详情，更新详情数据
+          if (this.currentBook && this.currentBook.id === this.bookForm.id) {
+            this.currentBook = { ...this.currentBook, ...this.bookForm };
+          }
+        } else {
+          throw new Error(res[1].data.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('操作失败:', error);
+        uni.showToast({
+          title: error.message || '操作失败',
+          icon: 'none'
+        });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    
+    // 表单验证
+    validateBookForm() {
+      if (!this.bookForm.title) {
+        uni.showToast({ title: '请输入图书名称', icon: 'none' });
+        return false;
+      }
+      
+      if (!this.bookForm.isbn) {
+        uni.showToast({ title: '请输入ISBN编号', icon: 'none' });
+        return false;
+      }
+      
+      if (!this.bookForm.category_id) {
+        uni.showToast({ title: '请选择图书分类', icon: 'none' });
+        return false;
+      }
+      
+      if (!this.bookForm.author) {
+        uni.showToast({ title: '请输入作者', icon: 'none' });
+        return false;
+      }
+      
+      if (!this.bookForm.price || isNaN(this.bookForm.price)) {
+        uni.showToast({ title: '请输入有效的价格', icon: 'none' });
+        return false;
+      }
+      
+      if (!this.bookForm.stock || isNaN(this.bookForm.stock)) {
+        uni.showToast({ title: '请输入有效的库存', icon: 'none' });
+        return false;
+      }
+      
+      return true;
+    },
+    
+    // 选择图片
+    async chooseImage() {
+      try {
+        const res = await uni.chooseImage({
+          count: 1,
+          sizeType: ['compressed'],
+          sourceType: ['album', 'camera']
+        });
+        
+        if (res.tempFilePaths.length > 0) {
+          uni.showLoading({ title: '上传中...' });
+          
+          const uploadRes = await uni.uploadFile({
+            url: '/api/upload',
+            filePath: res.tempFilePaths[0],
+            name: 'file',
+            formData: {
+              type: 'book_cover'
+            }
+          });
+          
+          const data = JSON.parse(uploadRes[1].data);
+          if (data.code === 200) {
+            this.bookForm.cover = data.data.url;
+          } else {
+            throw new Error(data.message || '上传失败');
+          }
+        }
+      } catch (error) {
+        console.error('选择图片失败:', error);
+        uni.showToast({
+          title: '上传图片失败',
+          icon: 'none'
+        });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    
+    // 切换图书状态
+    async toggleBookStatus() {
+      if (!this.currentBook) return;
+      
+      try {
+        uni.showLoading({ title: '处理中...' });
+        
+        const newStatus = this.currentBook.status === 'online' ? 'offline' : 'online';
+        
+        const res = await uni.request({
+          url: `/api/books/${this.currentBook.id}/status`,
+          method: 'PUT',
+          data: { status: newStatus }
+        });
+        
+        if (res[1].statusCode === 200) {
+          this.currentBook.status = newStatus;
+          
+          // 更新列表中的状态
+          const index = this.bookList.findIndex(b => b.id === this.currentBook.id);
+          if (index !== -1) {
+            this.bookList[index].status = newStatus;
+          }
+          
+          uni.showToast({
+            title: newStatus === 'online' ? '已上架' : '已下架',
+            icon: 'success'
+          });
+        } else {
+          throw new Error(res[1].data.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('切换状态失败:', error);
+        uni.showToast({
+          title: error.message || '操作失败',
+          icon: 'none'
+        });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    
+    // 确认删除
+    confirmDelete(id) {
+      this.deleteId = id;
+      this.$refs.deleteDialog.open();
+    },
+    
+    // 关闭删除确认
+    closeDeleteDialog() {
+      this.deleteId = null;
+    },
+    
+    // 删除图书
+    async deleteBook() {
+      if (!this.deleteId) return;
+      
+      try {
+        uni.showLoading({ title: '删除中...' });
+        
+        const res = await uni.request({
+          url: `/api/books/${this.deleteId}`,
+          method: 'DELETE'
+        });
+        
+        if (res[1].statusCode === 200) {
+          uni.showToast({
+            title: '删除成功',
+            icon: 'success'
+          });
+          
+          // 从列表中移除
+          this.bookList = this.bookList.filter(b => b.id !== this.deleteId);
+          this.total--;
+          
+          // 如果正在查看被删除的图书，关闭详情
+          if (this.currentBook && this.currentBook.id === this.deleteId) {
+            this.closeDetail();
+            this.currentBook = null;
+          }
+          
+          this.closeDeleteDialog();
+        } else {
+          throw new Error(res[1].data.message || '删除失败');
+        }
+      } catch (error) {
+        console.error('删除失败:', error);
+        uni.showToast({
+          title: error.message || '删除失败',
+          icon: 'none'
+        });
+      } finally {
+        uni.hideLoading();
+      }
+    },
+    
+    // 返回上一页
+    handleBack() {
+      uni.switchTab({
+      	url:'/pages/index/index'
+      })
+    }
+  }
+}
 </script>
 
-<style>
-	/* 样式部分与之前相同，保持不变 */
-	.container {
-		display: flex;
-		flex-direction: column;
-		padding: 20rpx;
-	}
+<style scoped>
+.book-manager-container {
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
 
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-bottom: 20rpx;
-	}
+.search-filter-bar {
+  padding: 20rpx;
+  background-color: #fff;
+  border-bottom: 1rpx solid #eee;
+}
 
-	.admin-info {
-		font-size: 28rpx;
-	}
+.filter-row {
+  display: flex;
+  margin-top: 20rpx;
+}
 
-	.logout {
-		color: #f56c6c;
-		margin-left: 20rpx;
-	}
+.filter-picker {
+  flex: 1;
+  margin-right: 20rpx;
+}
 
-	.breadcrumb {
-		font-size: 24rpx;
-		color: #909399;
-	}
+.filter-picker:last-child {
+  margin-right: 0;
+}
 
-	.search-filter {
-		display: flex;
-		margin-bottom: 20rpx;
-	}
+.picker-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 70rpx;
+  background-color: #f5f7fa;
+  border-radius: 35rpx;
+  font-size: 26rpx;
+  color: #333;
+}
 
-	.search-box {
-		flex: 1;
-		display: flex;
-		margin-right: 20rpx;
-	}
+.picker-content text {
+  margin-right: 10rpx;
+}
 
-	.search-input {
-		flex: 1;
-		border: 1rpx solid #dcdfe6;
-		padding: 10rpx 20rpx;
-		border-radius: 8rpx;
-	}
+.book-list-container {
+  background-color: #fff;
+}
 
-	.search-btn {
-		margin-left: 10rpx;
-		background-color: #409eff;
-		color: white;
-		border-radius: 8rpx;
-	}
+.book-list-header {
+  display: flex;
+  padding: 20rpx;
+  background-color: #fafafa;
+  border-bottom: 1rpx solid #eee;
+}
 
-	.filter-box {
-		margin-right: 20rpx;
-	}
+.header-cell {
+  font-size: 26rpx;
+  color: #666;
+  text-align: center;
+}
 
-	.type-picker {
-		border: 1rpx solid #dcdfe6;
-		padding: 10rpx 20rpx;
-		border-radius: 8rpx;
-	}
+.book-list-row {
+  display: flex;
+  padding: 25rpx 20rpx;
+  border-bottom: 1rpx solid #eee;
+}
 
-	.action-btns button {
-		margin-left: 10rpx;
-	}
+.book-list-row:active {
+  background-color: #f5f5f5;
+}
 
-	.add-btn {
-		background-color: #67c23a;
-		color: white;
-	}
+.row-cell {
+  font-size: 28rpx;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  word-break: break-all;
+}
 
-	.delete-btn {
-		background-color: #f56c6c;
-		color: white;
-	}
+.actions {
+  display: flex;
+  justify-content: space-around;
+}
 
-	.book-table {
-		border: 1rpx solid #ebeef5;
-		border-radius: 8rpx;
-		overflow: hidden;
-	}
+.actions uni-icons {
+  padding: 10rpx;
+}
 
-	.table-header,
-	.table-row {
-		display: flex;
-	}
+.book-cover {
+  width: 80rpx;
+  height: 100rpx;
+}
 
-	.table-header {
-		background-color: #f5f7fa;
-		font-weight: bold;
-	}
+.status-badge {
+  padding: 5rpx 15rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+}
 
-	.header-cell,
-	.body-cell {
-		padding: 20rpx;
-		border-right: 1rpx solid #ebeef5;
-		border-bottom: 1rpx solid #ebeef5;
-		text-align: center;
-	}
+.status-badge.online {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border: 1rpx solid #91d5ff;
+}
 
-	.header-cell:last-child,
-	.body-cell:last-child {
-		border-right: none;
-	}
+.status-badge.offline {
+  background-color: #fff2f0;
+  color: #f5222d;
+  border: 1rpx solid #ffa39e;
+}
 
-	.table-row:last-child .body-cell {
-		border-bottom: none;
-	}
+.status-badge.soldout {
+  background-color: #fffbe6;
+  color: #faad14;
+  border: 1rpx solid #ffe58f;
+}
 
-	.book-image {
-		width: 80rpx;
-		height: 80rpx;
-	}
+.empty-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100rpx 0;
+  color: #999;
+}
 
-	.action-cell {
-		display: flex;
-		flex-direction: column;
-	}
+.empty-placeholder text {
+  margin-top: 20rpx;
+}
 
-	.action-btn {
-		margin: 5rpx 0;
-		color: #409eff;
-	}
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 30rpx;
+}
 
-	.pagination {
-		display: flex;
-		justify-content: space-between;
-		margin-top: 20rpx;
-	}
+.pagination button {
+  margin: 0 20rpx;
+  padding: 0 30rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 26rpx;
+  border-radius: 30rpx;
+  background-color: #f5f5f5;
+  color: #666;
+  border: none;
+}
 
-	.page-controls button {
-		margin: 0 10rpx;
-		padding: 10rpx 20rpx;
-	}
+.pagination button[disabled] {
+  opacity: 0.5;
+}
 
-	.dialog-form {
-		padding: 20rpx;
-	}
+.page-info {
+  font-size: 26rpx;
+  color: #666;
+}
 
-	.form-item {
-		margin-bottom: 20rpx;
-		display: flex;
-		align-items: center;
-	}
+/* 详情抽屉样式 */
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
 
-	.form-label {
-		width: 150rpx;
-	}
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #eee;
+}
 
-	.form-input {
-		flex: 1;
-		border: 1rpx solid #dcdfe6;
-		padding: 10rpx 20rpx;
-		border-radius: 8rpx;
-	}
+.detail-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
 
-	.preview-image {
-		width: 100rpx;
-		height: 100rpx;
-		margin-left: 20rpx;
-	}
+.detail-body {
+  flex: 1;
+  padding: 30rpx;
+}
 
-	.detail-content {
-		padding: 20rpx;
-	}
+.detail-section {
+  margin-bottom: 40rpx;
+}
 
-	.detail-image {
-		width: 200rpx;
-		height: 200rpx;
-		display: block;
-		margin: 0 auto 20rpx;
-	}
+.detail-cover {
+  width: 200rpx;
+  height: 280rpx;
+  margin-right: 30rpx;
+  float: left;
+}
 
-	.detail-row {
-		display: flex;
-		margin-bottom: 15rpx;
-	}
+.basic-info {
+  overflow: hidden;
+}
 
-	.detail-label {
-		width: 150rpx;
-		font-weight: bold;
-	}
+.book-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 15rpx;
+  display: block;
+}
 
-	.detail-value {
-		flex: 1;
-	}
+.book-meta {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 10rpx;
+  display: block;
+}
 
-	.example-body {
-		/* #ifndef APP-NVUE */
-		display: flex;
-		/* #endif */
-		padding: 20rpx;
+.price-stock {
+  display: flex;
+  align-items: center;
+  margin: 20rpx 0;
+}
 
-	}
+.price {
+  font-size: 36rpx;
+  color: #f5222d;
+  margin-right: 30rpx;
+}
+
+.stock {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.status {
+  display: inline-block;
+  padding: 5rpx 15rpx;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+}
+
+.status.online {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border: 1rpx solid #91d5ff;
+}
+
+.status.offline {
+  background-color: #fff2f0;
+  color: #f5222d;
+  border: 1rpx solid #ffa39e;
+}
+
+.section-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20rpx;
+  display: block;
+  border-left: 6rpx solid #1890ff;
+  padding-left: 15rpx;
+}
+
+.book-description {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.6;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+}
+
+.info-item {
+  display: flex;
+}
+
+.info-label {
+  width: 120rpx;
+  font-size: 26rpx;
+  color: #999;
+}
+
+.info-value {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.detail-footer {
+  display: flex;
+  padding: 20rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.action-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  border-radius: 40rpx;
+  margin: 0 10rpx;
+  border: none;
+}
+
+.status-btn {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.status-btn.offline {
+  background-color: #1890ff;
+  color: #fff;
+}
+
+.edit-btn {
+  background-color: #1890ff;
+  color: #fff;
+}
+
+.delete-btn {
+  background-color: #f5222d;
+  color: #fff;
+}
+
+/* 表单弹窗样式 */
+.dialog-form {
+  padding: 20rpx;
+}
+
+.form-item {
+  margin-bottom: 30rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 15rpx;
+}
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  padding: 0 20rpx;
+  border-radius: 8rpx;
+  background-color: #f5f7fa;
+  border: 1rpx solid #eee;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  width: 100%;
+  height: 200rpx;
+  padding: 20rpx;
+  border-radius: 8rpx;
+  background-color: #f5f7fa;
+  border: 1rpx solid #eee;
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+.upload-btn {
+  width: 200rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 26rpx;
+  background-color: #f5f7fa;
+  color: #1890ff;
+  border: 1rpx solid #1890ff;
+  border-radius: 30rpx;
+  margin-bottom: 15rpx;
+}
+
+.cover-preview {
+  width: 150rpx;
+  height: 200rpx;
+  border-radius: 8rpx;
+}
 </style>
