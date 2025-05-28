@@ -1,21 +1,20 @@
 package ServerSide.service.tableService;
 
-import ServerSide.dao.*;
-import ServerSide.domain.*;
+
 import org.junit.BeforeClass;
 import org.junit.*;
 import utils.JDBCUtilsByDruid;
 import ServerSide.dao.borrowerDAO;
 import ServerSide.dao.staffDAO;
-import ServerSide.domain.borrower;
+
 import ServerSide.domain.staff;
-import utils.JDBCUtilsByDruid;
+
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.math.BigDecimal;
 import java.sql.Date;
-import java.sql.SQLException;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -95,10 +94,16 @@ public class PersonnelManagementServices {
             return true;
 
         } catch (Exception e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ignore) {}
+            if (conn != null) try {
+                conn.rollback();
+            } catch (SQLException ignore) {
+            }
             throw new RuntimeException("设置员工离职失败，事务已回滚", e);
         } finally {
-            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
+            if (conn != null) try {
+                conn.setAutoCommit(true);
+            } catch (SQLException ignore) {
+            }
             JDBCUtilsByDruid.close(null, null, conn);
         }
     }
@@ -149,10 +154,16 @@ public class PersonnelManagementServices {
             return true;
 
         } catch (Exception e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ignore) {}
+            if (conn != null) try {
+                conn.rollback();
+            } catch (SQLException ignore) {
+            }
             throw new RuntimeException("更新员工信息失败", e);
         } finally {
-            if (conn != null) try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
+            if (conn != null) try {
+                conn.setAutoCommit(true);
+            } catch (SQLException ignore) {
+            }
             JDBCUtilsByDruid.close(null, null, conn);
         }
     }

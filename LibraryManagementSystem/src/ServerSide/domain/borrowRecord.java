@@ -1,8 +1,9 @@
 package ServerSide.domain;
 
+import java.io.Serializable;
 import java.sql.Date;
 
-public class borrowRecord {
+public class borrowRecord  implements Serializable {
     // 记录ID (主键，自增长)
     private Integer recordId;
 

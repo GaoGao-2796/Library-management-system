@@ -1,9 +1,10 @@
 package ServerSide.domain;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Date;
 
-public class staff {
+public class staff  implements Serializable {
     // 员工ID (主键，自增长)
     private Integer staffId;
     // 员工编号 (12位数字，前两位为入职年份)

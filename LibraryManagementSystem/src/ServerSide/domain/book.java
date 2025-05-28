@@ -1,6 +1,8 @@
 package ServerSide.domain;
 
-public class book {
+import java.io.Serializable;
+
+public class book implements Serializable {
     // 图书ID (主键，自增长)
     private Integer bookId;
 

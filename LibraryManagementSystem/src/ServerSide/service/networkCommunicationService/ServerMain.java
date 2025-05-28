@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 public class ServerMain {
 
     private static final int PORT = 9999;
-    private static final int THREAD_POOL_SIZE = 20;
+    private static final int THREAD_POOL_SIZE = 30;
 
     public static void main(String[] args) {
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);

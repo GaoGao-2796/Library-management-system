@@ -1,7 +1,8 @@
 package ServerSide.domain;
+import java.io.Serializable;
 import java.sql.Date;
 
-public class borrower {
+public class borrower  implements Serializable {
     // 借阅者ID (主键，自增长)
     private Integer borrowerId;
 

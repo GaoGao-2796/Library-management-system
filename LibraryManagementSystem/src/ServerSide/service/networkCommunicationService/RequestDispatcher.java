@@ -66,7 +66,7 @@ public class RequestDispatcher {
                     return new Response(result, result ? "离职成功" : "离职失败", null);
                 }
                 case UPDATE_STAFF -> {
-                    boolean result = personnelService.updateStaffInfoWithVersion((staff) payload);
+                    boolean result = personnelService.updateStaff((staff) payload);
                     return new Response(result, result ? "修改成功" : "修改失败", null);
                 }
                 case LIST_STAFF -> {

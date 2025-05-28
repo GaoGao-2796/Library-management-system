@@ -1,9 +1,10 @@
 package ServerSide.domain;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Date;
 
-public class bookVersion {
+public class bookVersion  implements Serializable {
     public bookVersion(Integer versionId, Integer bookId, String bookCode, String authors,
                        String edition, Date publishDate, String language,
                        Integer pageCount, BigDecimal price, Integer stockQuantity) {

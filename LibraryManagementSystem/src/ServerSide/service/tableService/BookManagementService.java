@@ -37,7 +37,7 @@ public class BookManagementService {
      */
     public List<bookVersion> getAllBooksWithVersions() {
         String sql = """
-                SELECT b.book_id, b.title, b.isbn, bv.book_code, bv.authors, bv.edition, 
+                SELECT bv.version_id, b.book_id, b.title, b.isbn, bv.book_code, bv.authors, bv.edition, 
                        bv.publish_date, bv.language, bv.page_count, bv.price, bv.stock_quantity
                 FROM books b
                 JOIN book_versions bv ON b.book_id = bv.book_id
