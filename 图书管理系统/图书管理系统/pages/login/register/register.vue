@@ -1,8 +1,21 @@
 <template>
   <view class="register-container">
-    <uni-nav-bar title="用户注册" left-icon="left" @clickLeft="navigateBack" />
+   
     
     <view class="form-container">
+	  <!--  借阅者ID --> 
+	  <view class="input-group">
+	    <uni-icons type="person" size="20" color="#1890ff"></uni-icons>
+	    <input 
+	      class="input-field" 
+	      type="text" 
+	      v-model="form.borrowerId" 
+	      placeholder="请输入借阅证ID"
+	      maxlength="20"
+	      @focus="resetError('borrowerId')"
+	    />
+	    <text class="error-msg">{{ errors.borrowerId }}</text>
+	  </view>
       <!-- 借阅证编号 -->
       <view class="input-group">
         <uni-icons type="person" size="20" color="#1890ff"></uni-icons>
@@ -171,25 +184,10 @@ export default {
     
     // 处理注册
     handleRegister() {
-      if (!this.validateForm()) return;+-
-	  +
+      if (!this.validateForm()) return;
       
-      // 获取本地存储的 borrowers 数据
+      // 从本地存储获取现有用户数据
       const borrowers = JSON.parse(uni.getStorageSync('borrowers') || '[]');
-      // 发送数据到后端
-      uni.request({
-        url: 'http://your-backend-server.com/api/register', // 替换为你的后端接口地址
-        method: 'POST',
-        data: {
-          borrowers: borrowers
-        },
-        success: (res) => {
-          console.log('数据发送成功', res.data);
-        },
-        fail: (err) => {
-          console.error('数据发送失败', err);
-        }
-      });
       
       // 唯一性校验
       const exists = borrowers.some(user => user.borrowerId === this.form.borrowerId);
@@ -243,7 +241,8 @@ export default {
 <style scoped>
 /* 保持原有的样式不变 */
 .register-container {
-  padding: 20rpx;
+  padding: 60rpx;
+  
 }
 
 .input-group {

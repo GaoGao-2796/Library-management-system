@@ -37,4 +37,9 @@
 	.uni-bg-blue {
 		background-color: blue;
 	}
+
+	/* 重置可能影响导航栏的全局样式 */
+	uni-page-wrapper, uni-page-body {
+	  height: auto !important;
+	}
 </style>

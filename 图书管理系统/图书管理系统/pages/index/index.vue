@@ -60,13 +60,7 @@
 			</view>
 		</view>
 
-		<!-- 底部导航 -->
-		<view class="footer-nav">
-			<view v-for="(nav, index) in navItems" :key="index" class="nav-item" @click="handleNavClick(nav, index)">
-				<uni-icons :type="nav.icon" size="24" :color="isCurrentPage(nav.path) ? '#1890ff' : '#666'" />
-				<text :class="{ active: isCurrentPage(nav.path) }">{{ nav.text }}</text>
-			</view>
-		</view>
+		
 	</view>
 </template>
 
@@ -129,7 +123,7 @@
 					{
 						text: '借阅',
 						icon: 'cart',
-						path: '/pages/borrow/index'
+						path: '/pages/borrow/borrow'
 					},
 					{
 						text: '我的',
@@ -416,25 +410,26 @@
 	}
 
 	.footer-nav {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		display: flex;
-		justify-content: space-around;
-		padding: 15rpx 0;
-		background-color: #fff;
-		border-top: 1rpx solid #eee;
-		z-index: 100;
+	  position: fixed;
+	  bottom: 0;
+	  left: 0;
+	  right: 0;
+	  width: 100%; /* 确保全宽 */
+	  display: flex;
+	  justify-content: space-around;
+	  padding: 15rpx 0;
+	  background-color: #fff;
+	  border-top: 1rpx solid #eee;
+	  z-index: 9999; /* 提高z-index确保在最前 */
+	  box-sizing: border-box; /* 防止padding影响宽度 */
 	}
-
+	
 	.nav-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: 10rpx 0;
-		/* 添加点击效果 */
-		transition: all 0.3s;
+	  display: flex;
+	  flex-direction: column;
+	  align-items: center;
+	  width: 25%; /* 确保均匀分布 */
+	  padding: 10rpx 0;
 	}
 
 	.nav-item:active {

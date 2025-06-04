@@ -47,18 +47,20 @@
 			{
 				"navigationBarTitleText" : ""
 			}
+		},
+		{
+			"path" : "pages/borrow/borrow",
+			"style" : 
+			{
+				"navigationStyle": "custom" 
+			}
 		}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "uni-app",
 		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8",
-		"app-plus": {
-			"titleNView": {
-				false
-			}
-		}
+		"backgroundColor": "#F8F8F8"
 	},
 	"uniIdRouter": {},
 	"tabBar": {
@@ -76,7 +78,7 @@
 	        "text": "分类"
 	      },
 	      {
-	        "pagePath": "pages/borrow/index",
+	        "pagePath": "pages/borrow/borrow",
 	        "text": "借阅"
 	      },
 	      {
