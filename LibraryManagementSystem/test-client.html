@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>图书管理系统 - 前端模拟</title>
+</head>
+<body>
+<h1>📚 注册新借阅者</h1>
+
+<form id="registerForm">
+    <label>借阅者编号（12位）: <input type="text" name="number" value="202599999999" /></label><br>
+    <label>姓名: <input type="text" name="name" value="测试用户" /></label><br>
+    <label>性别:
+        <select name="gender">
+            <option value="男">男</option>
+            <option value="女">女</option>
+        </select>
+    </label><br>
+    <label>年龄: <input type="number" name="age" value="21" /></label><br>
+    <button type="submit">注册</button>
+</form>
+
+<pre id="result"></pre>
+
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const form = e.target;
+        const payload = {
+            borrowerNumber: form.number.value,
+            name: form.name.value,
+            gender: form.gender.value,
+            age: parseInt(form.age.value),
+            registerDate: new Date().toISOString().split("T")[0],  // 格式如 2025-06-05
+            status: "正常"
+        };
+
+        const requestBody = {
+            operationType: "REGISTER",
+            payload: payload
+        };
+
+        try {
+            const res = await fetch('http://localhost:3000/api/socket', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            const result = await res.json();
+            document.getElementById('result').textContent = JSON.stringify(result, null, 2);
+        } catch (err) {
+            document.getElementById('result').textContent = '请求失败：' + err.message;
+        }
+    });
+</script>
+</body>
+</html>
